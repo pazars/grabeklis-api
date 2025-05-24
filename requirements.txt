@@ -4,4 +4,4 @@ httpx
 motor==3.7.1
 pydantic-settings==2.9.1
 loguru
-google-genai==1.15.0
+google-adk==1.0.0

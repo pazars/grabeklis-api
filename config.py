@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     GCP_PROJECT_ID: str
     VERTEXAI_REGION: str
 
+    # Google ADK
+    GOOGLE_ADK_BASE_URL: str
+
     SUMMARY_SYSTEM_PROMPT: str
 
     class Config:
