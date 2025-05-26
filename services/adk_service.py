@@ -1,7 +1,8 @@
 import httpx
 from fastapi import HTTPException
 from config import settings
-from schemas.agent_schemas import RunAgentRequest, Message
+from schemas.agent_schemas import RunAgentRequest
+from google.genai import types
 from loguru import logger
 
 
@@ -88,7 +89,7 @@ class ADKService:
             )
 
     async def prompt_adk_agent(
-        self, app_name: str, user_id: str, session_id: str, prompt_text: str
+        self, app_name: str, user_id: str, session_id: str, content: types.Content
     ) -> dict:
         """
         Prompts the ADK agent via the /run endpoint of the adk api_server.
@@ -98,19 +99,15 @@ class ADKService:
             appName=app_name,
             userId=user_id,
             sessionId=session_id,
-            newMessage=Message(  # Updated reference
-                role="user", parts=[{"text": prompt_text}]
-            ),
+            newMessage=content,
         ).model_dump(by_alias=True)
-        logger.debug(
-            f"Prompting ADK agent at {run_agent_url} with payload: {run_agent_payload}"
-        )
 
         try:
             response = await self.httpx_client.post(
                 run_agent_url,
                 json=run_agent_payload,
                 headers={"Content-Type": "application/json"},
+                timeout=60,
             )
             response.raise_for_status()
             logger.info(

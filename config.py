@@ -13,8 +13,8 @@ class Settings(BaseSettings):
 
     # Google ADK
     GOOGLE_ADK_BASE_URL: str
-
-    SUMMARY_SYSTEM_PROMPT: str
+    ADK_SYSTEM_USERNAME: str
+    ADK_SYSTEM_SESSION_ID: str
 
     class Config:
         # Load .env file in development mode
