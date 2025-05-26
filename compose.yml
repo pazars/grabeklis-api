@@ -1,9 +1,0 @@
-services:
-  web:
-    build: .
-    environment:
-      - APP_NAME=grabeklis-api
-    env_file:
-      - .env
-    ports:
-      - "8080:8000"
