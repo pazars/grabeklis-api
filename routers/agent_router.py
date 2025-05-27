@@ -2,9 +2,8 @@ import json
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
-from loguru import logger
-from config import settings
-from services.mongodb_service import get_db
+from core.config import settings
+from core.database import get_db
 from services.adk_service import adk_service
 from schemas.agent_schemas import ResponseSchema
 
@@ -88,7 +87,11 @@ async def summarise_agent_articles(
 
     try:
         # 1. Check/Create Google ADK Session
-        await adk_service.get_or_create_adk_session(agent_name, username, session_id)
+        await adk_service.get_or_create_adk_session(
+            agent_name,
+            username,
+            session_id,
+        )
         # Parse the dates
 
         dt = datetime.strptime(date, fmt)

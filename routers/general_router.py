@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Path
-from loguru import logger
-from config import settings
+from core.logger import logger
+from core.config import settings
 from datetime import datetime
 from fastapi.responses import JSONResponse
 from typing import Literal
 from google import genai
 from google.genai import types
-from services.mongodb_service import get_db
+from core.database import get_db
 
 
 category_mapping: dict[str, str | None] = {
@@ -68,7 +68,7 @@ async def get_articles_by_date(date: str = Path(..., regex=r"^\d{8}$")) -> JSONR
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
     articles = await fetch_article(filter_date, "article")
-    logger.debug(f"Found {len(articles)} posts for date {date}")
+    logger.info(f"Found {len(articles)} posts for date {date}")
 
     return JSONResponse(
         content={"articles": articles}, media_type="application/json; charset=utf-8"
@@ -82,12 +82,12 @@ async def get_titles_by_date(date: str = Path(..., regex=r"^\d{8}$")) -> JSONRes
     """
     try:
         filter_date = parse_date(date)
-        logger.debug(f"Parsed date: {filter_date}")
+        logger.info(f"Parsed date: {filter_date}")
     except ValueError as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
     titles = await fetch_article(filter_date, "title")
-    logger.debug(f"Found {len(titles)} posts for date {date}")
+    logger.info(f"Found {len(titles)} posts for date {date}")
 
     return JSONResponse(
         content={"titles": titles}, media_type="application/json; charset=utf-8"
@@ -108,7 +108,7 @@ async def get_titles_by_category_and_date(
 
     category = category_mapping.get(category_key)
     titles = await fetch_article(filter_date, "title", category)
-    logger.debug(f"Found {len(titles)} posts for category '{category}' and date {date}")
+    logger.info(f"Found {len(titles)} posts for category '{category}' and date {date}")
 
     return JSONResponse(
         content={"titles": titles}, media_type="application/json; charset=utf-8"

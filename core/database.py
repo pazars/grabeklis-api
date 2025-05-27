@@ -1,10 +1,10 @@
 import certifi
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from config import settings
+from core.config import settings
 from typing import Optional
-from loguru import logger
+from core.logger import logger
 
-class MongoDBService:
+class MongoDB:
     def __init__(self):
         self.client: Optional[AsyncIOMotorClient] = None
         self.db: Optional[AsyncIOMotorDatabase] = None
@@ -31,7 +31,7 @@ class MongoDBService:
         return self.db
 
 # Instantiate the service (but don't connect yet)
-mongodb_service = MongoDBService()
+mongodb_service = MongoDB()
 
 # Dependency for FastAPI endpoints
 async def get_db() -> AsyncIOMotorDatabase:

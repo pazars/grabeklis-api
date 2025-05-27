@@ -1,9 +1,9 @@
 import httpx
 from fastapi import HTTPException
-from config import settings
+from core.config import settings
 from schemas.agent_schemas import RunAgentRequest
 from google.genai import types
-from loguru import logger
+from core.logger import logger
 
 
 class ADKService:
