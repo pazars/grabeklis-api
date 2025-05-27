@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Optional
 from google.genai import types
 
 
@@ -19,6 +19,4 @@ class Summary(BaseModel):
     articles: list[Article]
 
 class ResponseSchema(BaseModel):
-    # Adding an extra field like status helps correctly format the response
     category_summary: list[Summary]
-    status: Optional[Literal["success", "error"]]
