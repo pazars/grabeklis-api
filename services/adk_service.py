@@ -107,7 +107,7 @@ class ADKService:
                 run_agent_url,
                 json=run_agent_payload,
                 headers={"Content-Type": "application/json"},
-                timeout=60,
+                timeout=300,
             )
             response.raise_for_status()
             logger.info(
