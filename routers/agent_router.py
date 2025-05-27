@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
 from core.config import settings
+from core.logger import logger
 from core.database import get_db
 from services.adk_service import adk_service
 from schemas.agent_schemas import ResponseSchema
@@ -139,8 +140,16 @@ async def summarise_agent_articles(
         )
 
         prelim_answer = res[0]["content"]["parts"][0]["text"]
-        answer = json.loads(prelim_answer)
-        answer = ResponseSchema(**answer)
+
+        try:
+            answer = json.loads(prelim_answer)
+            answer = ResponseSchema(**answer)
+        except Exception as e:
+            logger.error(f"Error parsing agent response: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to parse agent response.",
+            )
 
         return JSONResponse(
             content=answer.model_dump(),
