@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import JSONResponse
 from core.config import settings
@@ -64,7 +64,7 @@ async def chat_with_agent_endpoint(
         )
 
 
-@router.get("/agent/summary/daily{agent_name}")
+@router.get("/agent/summary/daily/{agent_name}")
 async def summarise_agent_articles(
     agent_name: str = Path(
         ...,
@@ -96,15 +96,21 @@ async def summarise_agent_articles(
 
         dt = datetime.strptime(date, fmt)
 
-        # Query MongoDB for articles within the date range
+        # Query MongoDB for articles within the single day
         db = await get_db()
         col = db[settings.MONGO_COLLECTION]
+
+        # Articles of the same day are considered until 3 AM the next day
+        start_of_day = dt.replace(hour=0, minute=0, second=0)
+        end_of_day = start_of_day + timedelta(days=1, hours=3)
+
         query = {
             "date": {
-                "$gte": dt,
-                "$lte": dt,
+                "$gte": start_of_day,
+                "$lt": end_of_day,
             }
         }
+        
         articles = await col.find(
             query,
             {
