@@ -21,4 +21,4 @@ class Summary(BaseModel):
 class ResponseSchema(BaseModel):
     # Adding an extra field like status helps correctly format the response
     category_summary: list[Summary]
-    status: Literal["success", "error"]
+    status: Optional[Literal["success", "error"]]
