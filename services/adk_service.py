@@ -1,3 +1,4 @@
+import asyncio
 import httpx
 from fastapi import HTTPException
 from core.config import settings
@@ -12,81 +13,38 @@ class ADKService:
         self.httpx_client = httpx.AsyncClient(base_url=self.adk_api_base_url)
 
     async def get_or_create_adk_session(
-        self, app_name: str, user_id: str, session_id: str
+        self, app_name: str, user_id: str, session_id: str, max_retries: int = 5
     ):
         """
-        Attempts to get an ADK session. If not found (404), creates a new one.
-        Returns the session details or raises an HTTPException.
+        Attempts to get an ADK session. If not found, tries to create it.
+        Retries with exponential backoff if creation fails.
         """
-        session_base_url = f"/apps/{app_name}/users/{user_id}/sessions/{session_id}"
-        logger.debug(f"Attempting to get ADK session: {session_base_url}")
+        session_url = f"/apps/{app_name}/users/{user_id}/sessions/{session_id}"
 
-        # 1. First, attempt to GET the session
-        try:
-            get_response = await self.httpx_client.get(session_base_url)
-            get_response.raise_for_status()
+        for attempt in range(max_retries):
+            try:
+                # Try to GET the session
+                resp = await self.httpx_client.get(session_url)
+                if resp.status_code == 200:
+                    logger.info("Using existing ADK session")
+                    return resp.json()
+                # If not found, try to create
+                else:
+                    create_resp = await self.httpx_client.post(session_url, json={})
+                    if create_resp.status_code - 200 < 100:
+                        logger.info(f"Created new ADK session: {user_id} - {session_id}")
+                        return create_resp.json()
+            except Exception:
+                logger.info(f"Attempt {attempt + 1}: Failed to get or create ADK session.")
+                pass  # Ignore and retry
 
-            # If GET is successful (200 OK), session already exists
-            logger.info(
-                f"ADK api_server: Session '{session_id}' for user '{user_id}' and app '{app_name}' already exists."
-            )
-            return get_response.json()  # Return existing session details
+            # Exponential backoff
+            await asyncio.sleep(2 ** attempt)
 
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                # Session not found, proceed to create it
-                logger.info(
-                    f"ADK api_server: Session '{session_id}' not found (404). Attempting to create..."
-                )
-            else:
-                # Other HTTP errors during GET (e.g., 500)
-                logger.error(
-                    f"ADK api_server: Error during GET session ({e.response.status_code}): {e.response.text}"
-                )
-                raise HTTPException(
-                    status_code=e.response.status_code,
-                    detail=f"Failed to check ADK session via api_server: {e.response.text}",
-                )
-        except httpx.RequestError as e:
-            # Network error during GET attempt
-            logger.error(
-                f"Network error trying to connect to ADK api_server session endpoint (GET): {e}"
-            )
-            raise HTTPException(
-                status_code=503,
-                detail=f"Could not connect to ADK api_server session service at {self.adk_api_base_url}: {e}",
-            )
-
-        # 2. If session was not found (404 from GET), attempt to POST (create) it
-        try:
-            # A POST with an empty body is used to create the session.
-            post_response = await self.httpx_client.post(session_base_url, json={})
-            post_response.raise_for_status()  # Raises for 4xx/5xx
-
-            logger.info(
-                f"ADK api_server: Session '{session_id}' for user '{user_id}' and app '{app_name}' created successfully."
-            )
-            return post_response.json()  # Return newly created session details
-
-        except httpx.HTTPStatusError as e:
-            # This should ideally not happen if 404 was handled above,
-            # but it's good to keep defensive checks.
-            logger.error(
-                f"ADK api_server: Error during POST session ({e.response.status_code}): {e.response.text}"
-            )
-            raise HTTPException(
-                status_code=e.response.status_code,
-                detail=f"Failed to create ADK session via api_server: {e.response.text}",
-            )
-        except httpx.RequestError as e:
-            # Network error during POST attempt
-            logger.error(
-                f"Network error trying to connect to ADK api_server session endpoint (POST): {e}"
-            )
-            raise HTTPException(
-                status_code=503,
-                detail=f"Could not connect to ADK api_server session service at {self.adk_api_base_url}: {e}",
-            )
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not get or create ADK session after {max_retries} attempts.",
+        )
 
     async def prompt_adk_agent(
         self, app_name: str, user_id: str, session_id: str, content: types.Content
