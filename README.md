@@ -1,2 +1,5 @@
-# grabeklis-api
-API for interacting with data scraped by Grābeklis
+# Run locally
+
+```
+fastapi dev main.py --port 8001
+```

@@ -2,7 +2,7 @@ import asyncio
 import httpx
 from fastapi import HTTPException
 from core.config import settings
-from schemas.agent_schemas import RunAgentRequest
+from schemas.lsm_schemas import RunAgentRequest
 from google.genai import types
 from core.logger import logger
 
@@ -65,7 +65,7 @@ class ADKService:
                 run_agent_url,
                 json=run_agent_payload,
                 headers={"Content-Type": "application/json"},
-                timeout=300,
+                timeout=600,
             )
             response.raise_for_status()
             logger.info(

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from routers import agent_router, general_router
+from routers import general_router, lsm_router
 from core.database import mongodb_service
 
 
@@ -15,7 +15,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # Include your routers
-app.include_router(agent_router.router, tags=["Agent chat"])
+app.include_router(lsm_router.router, tags=["LSM summaries"])
 app.include_router(general_router.router, tags=["General"])
 
 

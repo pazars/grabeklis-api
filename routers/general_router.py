@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, HTTPException, Path, Query
 from core.logger import logger
 from core.config import settings
 from datetime import datetime
 from fastapi.responses import JSONResponse
 from typing import Literal
-from google import genai
-from google.genai import types
 from core.database import get_db
+from services.adk_service import adk_service
 
 
 category_mapping: dict[str, str | None] = {
@@ -38,7 +37,7 @@ async def fetch_article(
     """
 
     db = await get_db()
-    col = db[settings.MONGO_COLLECTION]
+    col = db[settings.LSM_COLLECTION]
 
     # Build the query
     query = {
@@ -115,49 +114,55 @@ async def get_titles_by_category_and_date(
     )
 
 
-@router.get("/summarise/{date}")
-async def summarise_articles_for_date(
-    date: str = Path(..., regex=r"^\d{8}$"),
-) -> JSONResponse:
-    client = genai.Client(
-        vertexai=True,
-        project=settings.GCP_PROJECT_ID,
-        location=settings.VERTEXAI_REGION,
-    )
+@router.post("/agent/{agent_name}")
+async def chat_with_agent_endpoint(
+    agent_name: str = Path(
+        ...,
+        title="Agent Name",
+        description="Name of the agent to interact with.",
+    ),
+    prompt: str = Query(
+        ...,
+        title="Prompt",
+        description="Prompt to send to the agent.",
+    ),
+    username: str = Query(
+        ...,
+        title="Username",
+        description="Username for the session.",
+    ),
+    session_id: str = Query(
+        ...,
+        title="Session ID",
+        description="Session identifier.",
+    ),
+):
+    """
+    Handles interaction with a Google ADK agent.
+    Checks for an existing session and prompts the agent.
+    """
+    try:
+        # 1. Check/Create Google ADK Session
+        await adk_service.get_or_create_adk_session(
+            agent_name,
+            username,
+            session_id,
+        )
 
-    dt = parse_date(date)
-    db_response = await fetch_article(dt, "article")
-    articles = types.Part.from_text(text=" ".join(db_response))
+        content = {"role": "user", "parts": [{"text": prompt}]}
 
-    model = "gemini-2.0-flash-001"
-    contents = [
-        types.Content(role="user", parts=[articles]),
-    ]
+        # 2. Prompt the Agent
+        agent_response = await adk_service.prompt_adk_agent(
+            agent_name, username, session_id, content
+        )
 
-    generate_content_config = types.GenerateContentConfig(
-        temperature=1,
-        top_p=1,
-        max_output_tokens=8192,
-        safety_settings=[
-            types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
-            types.SafetySetting(
-                category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"
-            ),
-            types.SafetySetting(
-                category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"
-            ),
-            types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF"),
-        ],
-        system_instruction=[types.Part.from_text(text=settings.SUMMARY_SYSTEM_PROMPT)],
-    )
+        return agent_response
 
-    response = client.models.generate_content(
-        model=model,
-        contents=contents,
-        config=generate_content_config,
-    )
-
-    return JSONResponse(
-        content={"summary": response.text},
-        media_type="application/json; charset=utf-8",
-    )
+    except HTTPException as e:
+        raise e  # Re-raise FastAPI HTTPExceptions
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during agent interaction.",
+        )

@@ -5,7 +5,8 @@ class Settings(BaseSettings):
     # MongoDB
     MONGO_URI: str
     MONGO_DB: str
-    MONGO_COLLECTION: str
+    LSM_COLLECTION: str
+    LSM_SUMMARY_COLLECTION: str
 
     # Google Cloud Platform (GCP)
     GCP_PROJECT_ID: str
