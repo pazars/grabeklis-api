@@ -41,7 +41,7 @@ async def summarise_agent_articles(
         dt = datetime.strptime(date, fmt)
 
         find = {
-            "_id": 1,
+            "_id": 0,
             "url": 1,
             "article": 1,
             "category": 1,
@@ -61,17 +61,11 @@ async def summarise_agent_articles(
             logger.info(f"Article limit: {limit}")
             articles = articles[:limit]
 
-        parts, index = [], {}
-        for article in articles:
-            # LLMs copy URLs better than UUIDs
-            index[article["url"]] = article
-            for_request = {
-                "uuid": article["url"],
-                "category": article["category"],
-                "article": article["article"],
-            }
-
-            parts.append(types.Part.from_text(text=str(for_request)))
+        # Tried lowering token count by sending a shortuuid instead of url and title.
+        # Created an index of the ids and used it to map back the url and title post-request.
+        # Kept getting KeyErrors because the model hallucinated the ids.
+        # From time to time it worked out, but the retries cancelled the token savings.
+        parts = [types.Part.from_text(text=str(x)) for x in articles]
 
         # Prepare content for the agent
         content = {"role": "user", "parts": parts}
@@ -135,32 +129,10 @@ async def summarise_agent_articles(
                 detail="Failed to parse agent response.",
             )
 
-        response_summaries: list[lsm_schemas.Summary] = []
-        # Map back to database IDs and add metadata
-        for summary in summaries.summaries:
-            response_articles: list[lsm_schemas.Article] = []
-
-            for article in summary.articles:
-                data = index[article.uuid]
-                response_article = lsm_schemas.Article(
-                    article_id=data["_id"],
-                    title=data["title"],
-                    url=data["url"],
-                    ai_summary=article.summary,
-                )
-                response_articles.append(response_article)
-
-            response_summary = lsm_schemas.Summary(
-                category=summary.category,
-                articles=response_articles,
-            )
-
-            response_summaries.append(response_summary)
-
         res = lsm_schemas.MongoSummaryDocument(
             **{
                 "date": dt.strftime("%Y%m%d"),
-                "summaries": response_summaries,
+                "summaries": summaries.summaries,
             }
         )
 

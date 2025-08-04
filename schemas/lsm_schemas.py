@@ -1,45 +1,12 @@
 from bson import ObjectId
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
-from google.genai import types
 
 
-class RunAgentRequest(BaseModel):
-    appName: str
-    userId: Optional[str]
-    sessionId: Optional[str]
-    newMessage: types.Content
-
-
-# This is what is received from the agent
-class AgentArticle(BaseModel):
-    uuid: str
-    summary: str
-    title: str = None
-    url: str = None
-
-
-class AgentSummary(BaseModel):
-    category: str
-    articles: list[AgentArticle]
-
-
-class AgentResponseSchema(BaseModel):
-    summaries: list[AgentSummary]
-
-
-# This is what is saved in db
 class Article(BaseModel):
-    article_id: ObjectId
     title: str
     url: str
     ai_summary: str
-
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        json_encoders={ObjectId: str},
-    )
 
 
 class Summary(BaseModel):
@@ -47,10 +14,16 @@ class Summary(BaseModel):
     articles: list[Article]
 
 
+# What is received from LLM
+class AgentResponseSchema(BaseModel):
+    summaries: list[Summary]
+
+
 # What is stored in the summary collection
 class MongoSummaryDocument(BaseModel):
     date: str
     summaries: list[Summary]
+
 
 # Daily summary post response (upsert to mongo)
 class MongoUpdateResult(BaseModel):
@@ -88,5 +61,5 @@ class DailySummarySchema(BaseModel):
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
-        json_encoders={datetime: lambda dt: dt.strftime('%Y%m%d')}
+        json_encoders={datetime: lambda dt: dt.strftime("%Y%m%d")},
     )

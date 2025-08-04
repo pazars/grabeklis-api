@@ -2,7 +2,7 @@ import asyncio
 import httpx
 from fastapi import HTTPException
 from core.config import settings
-from schemas.lsm_schemas import RunAgentRequest
+from schemas.adk_schemas import RunAgentRequest
 from google.genai import types
 from core.logger import logger
 
