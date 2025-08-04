@@ -15,7 +15,7 @@ class MongoDB:
         db_name = settings.MONGO_DB
         self.client = AsyncIOMotorClient(uri, tlsCAFile=certifi.where())
         self.db = self.client[db_name]
-        logger.info(f"Connected to MongoDB: {uri}/{db_name}")
+        logger.info("Connected to MongoDB")
 
     async def close_db(self):
         """Closes the MongoDB connection."""

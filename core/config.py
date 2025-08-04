@@ -7,10 +7,13 @@ class Settings(BaseSettings):
     MONGO_DB: str
     LSM_COLLECTION: str
     LSM_SUMMARY_COLLECTION: str
+    REQUEST_LOG_COLLECTION: str
 
     # Google Cloud Platform (GCP)
     GCP_PROJECT_ID: str
-    VERTEXAI_REGION: str
+    GCP_REGION: str
+    GCP_MODEL_ID: str
+    SUMMARY_SYSTEM_PROMPT: str
 
     # Google ADK
     GOOGLE_ADK_BASE_URL: str
